@@ -19,8 +19,9 @@ import vn.iotstar.services.CategoryService;
 import vn.iotstar.services.VideoService;
 import static vn.iotstar.utils.Constant.*;
 
-@MultipartConfig(fileSizeThreshold = 1024 * 1024, maxFileSize = 1024 * 1024 * 5, maxRequestSize = 1024 * 1024 * 5 * 5)
-@WebServlet(urlPatterns = { "/admin/videos", "/admin/video/edit", "/admin/video/update", "/admin/video/insert", "/admin/video/add", "/admin/video/delete" })
+@MultipartConfig(fileSizeThreshold = 1024 * 1024 * 10, maxFileSize = 1024 * 1024 * 50, maxRequestSize = 1024 * 1024 * 100)
+@WebServlet(urlPatterns = { "/admin/videos", "/admin/video/edit", "/admin/video/update", "/admin/video/insert",
+		"/admin/video/add", "/admin/video/delete" })
 public class VideoController extends HttpServlet {
 
 	private static final long serialVersionUID = 1L;
@@ -92,27 +93,9 @@ public class VideoController extends HttpServlet {
 			String fileold = oldVideo.getPoster();
 
 			// Xử lý hình ảnh
-			String fname = "";
-			String uploadPath = UPLOAD_DIRECTORY;
-			File uploadDir = new File(uploadPath);
-			if (!uploadDir.exists()) {
-				uploadDir.mkdir();
-			}
-			try {
-				Part part = req.getPart("poster");
-				if (part.getSize() > 0) {
-					String filename = Paths.get(part.getSubmittedFileName()).getFileName().toString();
-					int index = filename.lastIndexOf(".");
-					String ext = filename.substring(index + 1);
-					fname = System.currentTimeMillis() + "." + ext;
-					part.write(uploadPath + "/" + fname);
-					video.setPoster(fname);
-				} else {
-					video.setPoster(fileold);
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			String fname = processUpload(req, "poster", fileold);
+
+			video.setPoster(fname);
 
 			videoService.update(video);
 			resp.sendRedirect(req.getContextPath() + "/admin/videos");
@@ -134,30 +117,36 @@ public class VideoController extends HttpServlet {
 			video.setCategory(category);
 
 			// Xử lý hình ảnh
-			String fname = "";
-			String uploadPath = UPLOAD_DIRECTORY;
-			File uploadDir = new File(uploadPath);
-			if (!uploadDir.exists()) {
-				uploadDir.mkdir();
-			}
-			try {
-				Part part = req.getPart("poster");
-				if (part.getSize() > 0) {
-					String filename = Paths.get(part.getSubmittedFileName()).getFileName().toString();
-					int index = filename.lastIndexOf(".");
-					String ext = filename.substring(index + 1);
-					fname = System.currentTimeMillis() + "." + ext;
-					part.write(uploadPath + "/" + fname);
-					video.setPoster(fname);
-				} else {
-					video.setPoster("default.png");
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+			String fname = processUpload(req, "poster", "default.png");
+
+			video.setPoster(fname);
 
 			videoService.insert(video);
 			resp.sendRedirect(req.getContextPath() + "/admin/videos");
 		}
+	}
+
+	// Phương thức xử lý upload hình ảnh
+	private String processUpload(HttpServletRequest req, String fieldName, String defaultFileName)
+			throws IOException, ServletException {
+		String fname = defaultFileName;
+		String uploadPath = UPLOAD_DIRECTORY;
+		File uploadDir = new File(uploadPath);
+		if (!uploadDir.exists()) {
+			uploadDir.mkdir();
+		}
+		try {
+			Part part = req.getPart(fieldName);
+			if (part != null && part.getSize() > 0) {
+				String filename = Paths.get(part.getSubmittedFileName()).getFileName().toString();
+				int index = filename.lastIndexOf(".");
+				String ext = filename.substring(index + 1);
+				fname = System.currentTimeMillis() + "." + ext;
+				part.write(uploadPath + "/" + fname);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return fname;
 	}
 }
